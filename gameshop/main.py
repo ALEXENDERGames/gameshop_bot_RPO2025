@@ -46,6 +46,13 @@ class User:
 
 @bot.message_handler(commands=["start", "help"])
 def main(message):
+    if check_user(message.from_user.id) == False:
+        new_user = User(message.from_user.id,
+                        message.from_user.name,
+                        message.from_user.username)
+        users.append(new_user)
+        print(users)
+
 
     bot.send_message(message.chat.id, "Привет! 🎮 Добро пожаловать в нашего игрового бота! "
                                       "Здесь ты найдешь крутые игры по отличным ценам, эксклюзивные предложения "
