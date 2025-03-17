@@ -11,6 +11,14 @@ users = []
 #    bot.send_message(message.chat.id, message.sticker)
 #    bot.send_sticker(message.chat.id, sticker="CAACAgIAAxkBAANJZ8-MjKtTxyn3cu8aKsriqptNL64AAmsVAAINFeFL3QhOXVKkrM82BA")
 #bot.send_message(message.chat.id, message.from_user.id)
+class Item:
+    def __init__(self, name, dicription, photo, price, genre, age):
+        self.name = name
+        self.dicription = dicription
+        self.photo = photo
+        self.price = price
+        self.genre = genre
+        self.age = age
 
 class User:
     def __init__(self, id, name, username):
@@ -22,10 +30,10 @@ class User:
         self.basket = []
         self.promocodes = ["newUser"]
 
-    def show_info(self):
-        bot.send_message(self.id, f"имя {self.name}")
-        bot.send_message(self.username, f"username {self.username}")
-        bot.send_message(self.age, f"возраст {self.age}")
+    def show_info(self, id):
+        bot.send_message(id, f"имя: {self.name} \n"
+                             f"username: {self.username} \n"
+                             f"возраст: {self.age}")
 
     def show_orders(self):
         if len(self.orders):
@@ -48,7 +56,7 @@ class User:
 def main(message):
     if check_user(message.from_user.id) == False:
         new_user = User(message.from_user.id,
-                        message.from_user.name,
+                        message.from_user.first_name,
                         message.from_user.username)
         users.append(new_user)
         print(users)
@@ -63,11 +71,13 @@ def main(message):
     admin = types.InlineKeyboardButton("обратиться к администратору", callback_data="admin")
     edit_profile = types.InlineKeyboardButton("редактировать профиль", callback_data="edit_profile")
     my_orders = types.InlineKeyboardButton("мои заказы", callback_data="my_orders")
+    user_profile = types.InlineKeyboardButton("информация о профиле", callback_data="user_profile")
 
-    for button in shop, admin, edit_profile, my_orders:
+    for button in shop, admin, edit_profile, my_orders, user_profile:
         menu_button.row(button)
 
     bot.send_message(message.chat.id, "Выберите нужный пункт меню", reply_markup=menu_button)
+
 
 
 @bot.callback_query_handler(func=lambda callback: True)
@@ -83,8 +93,13 @@ def main(callback):
             call_admin(callback.message)
         case "edit_profile":
             bot.send_message(id, "редактирование профиля")
-        case "my orders":
+        case "my_orders":
             bot.send_message(id, "Список ваших заказов")
+        case "user_profile":
+            for user in users:
+                if user.id == callback.from_user.id:
+                    user.show_info(user.id)
+                    break
         case _:
             bot.send_message(id, "данной команды пока что нет, просим прощения ☹")
 
