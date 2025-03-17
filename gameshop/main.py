@@ -4,6 +4,8 @@ from telebot import types
 bot = telebot.TeleBot("7791519532:AAGbG-AXgqCDn9NBDYD65FVdFeCddXIId8g")
 
 admin_id = 475799956
+
+users = []
 #@bot.message_handler(content_types=["sticker"])
 #def main(message):
 #    bot.send_message(message.chat.id, message.sticker)
@@ -40,12 +42,6 @@ class User:
                 bot.send_message(self.id, item)
         else:
             bot.send_message(self.id, "вы еще пока что ничего не добавили в корзину")
-
-
-
-
-
-
 
 
 @bot.message_handler(commands=["start", "help"])
@@ -93,5 +89,11 @@ def send_admin(message):
     bot.send_message(message.chat.id, "Данные отправленны администратору, он с вами свяжется")
     bot.send_message(admin_id, f"Запрос от @{message.from_user.username} \n"
                                f"Вопрос: {message.text}")
-
+def check_user(id):
+    is_user = False
+    for user in users:
+        if user.id == id:
+            is_user = True
+            break
+    return is_user
 bot.polling()
