@@ -20,6 +20,18 @@ class Item:
         self.genre = genre
         self.age = age
 
+    def show_info(self, id):
+        bot.send_photo(id, self.photo)
+
+        buttons = types.InlineKeyboardMarkup()
+        buy = types.InlineKeyboardButton("купить", callback_data=self.name)
+        buttons.add(buy)
+        bot.send_message(id, f"<b>{self.name}</b>\n"
+                             f"<b>описание</b> \n {self.dicription} \n"
+                             f"<b>жанр</b> \n {self.genre} \n"
+                             f"<b>Возрастное ограничение</b> \n {self.age} \n"
+                             f"<b>цена: {self.price}</b>", reply_markup=buttons)
+
 class User:
     def __init__(self, id, name, username):
         self.id = id
