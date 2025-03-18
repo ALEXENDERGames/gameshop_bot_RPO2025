@@ -1,81 +1,25 @@
 import telebot
+from user import *
+from item import *
 from telebot import types
 
 bot = telebot.TeleBot("7791519532:AAGbG-AXgqCDn9NBDYD65FVdFeCddXIId8g")
 
 admin_id = 475799956
 
-users = []
-#@bot.message_handler(content_types=["sticker"])
-#def main(message):
-#    bot.send_message(message.chat.id, message.sticker)
-#    bot.send_sticker(message.chat.id, sticker="CAACAgIAAxkBAANJZ8-MjKtTxyn3cu8aKsriqptNL64AAmsVAAINFeFL3QhOXVKkrM82BA")
-#bot.send_message(message.chat.id, message.from_user.id)
-class Item:
-    def __init__(self, name, dicription, photo, price, genre, age):
-        self.name = name
-        self.dicription = dicription
-        self.photo = photo
-        self.price = price
-        self.genre = genre
-        self.age = age
-
-    def show_info(self, id):
-        bot.send_photo(id, self.photo)
-
-        buttons = types.InlineKeyboardMarkup()
-        buy = types.InlineKeyboardButton("купить", callback_data=self.name)
-        buttons.add(buy)
-        bot.send_message(id, f"<b>{self.name}</b>\n"
-                             f"<b>описание</b> \n {self.dicription} \n"
-                             f"<b>жанр</b> \n {self.genre} \n"
-                             f"<b>Возрастное ограничение</b> \n {self.age} \n"
-                             f"<b>цена: {self.price}</b>", reply_markup=buttons)
-
-
-class User:
-    def __init__(self, id, name, username):
-        self.id = id
-        self.name = name
-        self.username = username
-        self.age = None
-        self.orders = []
-        self.basket = []
-        self.promocodes = ["newUser"]
-
-    def show_info(self, id):
-        bot.send_message(id, f"имя: {self.name} \n"
-                             f"username: {self.username} \n"
-                             f"возраст: {self.age}")
-
-    def show_orders(self):
-        if len(self.orders):
-            bot.send_message(self.id, "список заказов")
-            for order in self.orders:
-                bot.send_message(self.id, order)
-        else:
-            bot.send_message(self.id, "вы еще пока что ничего не заказали")
-
-    def show_basket(self):
-        if len(self.basket):
-            bot.send_message(self.id, "товары в корзине")
-            for item in self.orders:
-                bot.send_message(self.id, item)
-        else:
-            bot.send_message(self.id, "вы еще пока что ничего не добавили в корзину")
-
 gta = Item("GTA", "игра для народа",
-           open("photos/gta.jpg"), 1000,
+           open("photos/gta.jpg", "rb"), 1000,
            "action", "6+")
 
 witcher = Item("Witcher 3", "игра для борцов со злом",
-           open("photos/whitcher.jpg"), 800,
+           open("photos/whitcher.jpg", "rb"), 800,
            "action", "6+")
 
 wukong = Item("Wukong", "игра для Влада",
-           open("photos/wukong.jpg"), 2500,
+           open("photos/wukong.jpg", "rb"), 2500,
            "action", "1+")
 
+users = []
 items = [gta, witcher, wukong]
 
 @bot.message_handler(commands=["start", "help"])
@@ -111,9 +55,13 @@ def main(callback):
     print(callback)
     id = callback.message.chat.id
 
+    for item in items:
+        if item.name == callback.data:
+            item.show_info(id)
+
     match callback.data:
         case "shop":
-            bot.send_message(id, "Спиок игр: ")
+            show_items(items, id)
         case "admin":
             bot.send_message(id, "обращение к админу")
             call_admin(callback.message)
@@ -126,13 +74,12 @@ def main(callback):
                 if user.id == callback.from_user.id:
                     user.show_info(user.id)
                     break
-        case _:
-            bot.send_message(id, "данной команды пока что нет, просим прощения ☹")
+        #case _:
+        #    bot.send_message(id, "данной команды пока что нет, просим прощения ☹")
 
 def call_admin(message):
     message = bot.send_message(message.chat.id, "Введите вашу проблему:")
     bot.register_next_step_handler(message, send_admin)
-
 def send_admin(message):
     bot.send_message(message.chat.id, "Данные отправленны администратору, он с вами свяжется")
     bot.send_message(admin_id, f"Запрос от @{message.from_user.username} \n"
@@ -144,4 +91,14 @@ def check_user(id):
             is_user = True
             break
     return is_user
+
+def show_items(items, id):
+    games = types.InlineKeyboardMarkup()
+    for item in items:
+        game = types.InlineKeyboardButton(item.name, callback_data=item.name)
+        games.row(game)
+
+    bot.send_message(id, "список игр: ", reply_markup=games)
+
+
 bot.polling()
