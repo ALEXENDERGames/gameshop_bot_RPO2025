@@ -32,6 +32,7 @@ class Item:
                              f"<b>Возрастное ограничение</b> \n {self.age} \n"
                              f"<b>цена: {self.price}</b>", reply_markup=buttons)
 
+
 class User:
     def __init__(self, id, name, username):
         self.id = id
@@ -63,6 +64,19 @@ class User:
         else:
             bot.send_message(self.id, "вы еще пока что ничего не добавили в корзину")
 
+gta = Item("GTA", "игра для народа",
+           open("photos/gta.jpg"), 1000,
+           "action", "6+")
+
+witcher = Item("Witcher 3", "игра для борцов со злом",
+           open("photos/whitcher.jpg"), 800,
+           "action", "6+")
+
+wukong = Item("Wukong", "игра для Влада",
+           open("photos/wukong.jpg"), 2500,
+           "action", "1+")
+
+items = [gta, witcher, wukong]
 
 @bot.message_handler(commands=["start", "help"])
 def main(message):
