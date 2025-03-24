@@ -2,6 +2,25 @@ import telebot
 from user import *
 from item import *
 from telebot import types
+import sqlite3
+
+usersDB = sqlite3.connect('users.db')
+cursor = usersDB.cursor()
+
+#cursor.execute("DROP TABLE students")
+
+cursor.execute("CREATE TABLE IF NOT EXISTS users"
+               "(id INTEGER, "
+               "name TEXT, "
+               "username TEXT,"
+               "age INTEGER, "
+               "promocode TEXT)")
+
+cursor.execute("CREATE TABLE IF NOT EXISTS orders "
+               "(id INTEGER, "
+               "articul TEXT )")
+
+usersDB.close()
 
 bot = telebot.TeleBot("7791519532:AAGbG-AXgqCDn9NBDYD65FVdFeCddXIId8g")
 
@@ -9,27 +28,85 @@ admin_id = 475799956
 
 gta = Item("GTA", "игра для народа",
            open("photos/gta.jpg", "rb"), 1000,
-           "action", "6+")
+           "action", "6+", 1001)
 
 witcher = Item("Witcher 3", "игра для борцов со злом",
            open("photos/whitcher.jpg", "rb"), 800,
-           "action", "6+")
+           "action", "6+", 1002)
 
 wukong = Item("Wukong", "игра для Влада",
            open("photos/wukong.jpg", "rb"), 2500,
-           "action", "1+")
+           "action", "1+", 1003)
 
 users = []
 items = [gta, witcher, wukong]
 
+def get_info_db(users):
+    usersDB = sqlite3.connect('users.db')
+    cursor = usersDB.cursor()
+
+    cursor.execute("SELECT * FROM users")
+
+    users_db = cursor.fetchall()
+
+    for user in users_db:
+        userClass = User(user[0], user[1], user[2])
+        userClass.age = user[3]
+        userClass.promocodes = user[4]
+
+        users.append(userClass)
+
+    usersDB.close()
+    return users
+
+def write_into_db(user: User):
+    usersDB = sqlite3.connect('users.db')
+    cursor = usersDB.cursor()
+
+    cursor.execute("INSERT INTO users (id, name, username, age, promocode)"
+                   "VALUES (?, ?, ?, ?, ?)", (user.id, user.name, user.username, user.age, user.promocodes))
+
+    usersDB.commit()
+    usersDB.close()
+
+
+def get_orders_db(user):
+    orders = []
+    usersDB = sqlite3.connect('users.db')
+    cursor = usersDB.cursor()
+    cursor.execute("SELECT articul FROM orders WHERE id = ?", (user.id,))
+    orders = cursor.fetchall()[0].split()
+
+    usersDB.close()
+    return orders
+
+def set_orders_db(orders, id):
+    usersDB = sqlite3.connect('users.db')
+    cursor = usersDB.cursor()
+
+    orders_str = " ".join(orders)
+
+    cursor.execute("SELECT id FROM orders")
+    all_id = cursor.fetchall()
+
+    if id in all_id:
+        cursor.execute("UPDATE orders SET articul = ? WHERE id = ?", (orders_str, id))
+    else:
+        cursor.execute("INSERT INTO orders (id, articul) VALUES (?, ?)", (id, orders_str))
+
+    usersDB.close()
+
+users = get_info_db(users)
+
 @bot.message_handler(commands=["start", "help"])
 def main(message):
-    if check_user(message.from_user.id) == False:
+    if not(check_user(message.from_user.id)):
         new_user = User(message.from_user.id,
                         message.from_user.first_name,
                         message.from_user.username)
         users.append(new_user)
-        print(users)
+        write_into_db(new_user)
+
 
 
     bot.send_message(message.chat.id, "Привет! 🎮 Добро пожаловать в нашего игрового бота! "

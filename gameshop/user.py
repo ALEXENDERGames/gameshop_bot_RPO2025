@@ -10,8 +10,8 @@ class User:
         self.username = username
         self.age = None
         self.orders = []
-        self.basket = []
-        self.promocodes = ["newUser"]
+        #self.basket = []
+        self.promocodes = "newUser"
 
     def show_info(self, id):
         bot.send_message(id, f"имя: {self.name} \n"
@@ -26,10 +26,10 @@ class User:
         else:
             bot.send_message(self.id, "вы еще пока что ничего не заказали")
 
-    def show_basket(self):
-        if len(self.basket):
-            bot.send_message(self.id, "товары в корзине")
-            for item in self.orders:
-                bot.send_message(self.id, item)
-        else:
-            bot.send_message(self.id, "вы еще пока что ничего не добавили в корзину")
+    # def show_basket(self):
+    #     if len(self.basket):
+    #         bot.send_message(self.id, "товары в корзине")
+    #         for item in self.orders:
+    #             bot.send_message(self.id, item)
+    #     else:
+    #         bot.send_message(self.id, "вы еще пока что ничего не добавили в корзину")

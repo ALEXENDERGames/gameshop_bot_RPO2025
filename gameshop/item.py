@@ -3,13 +3,14 @@ from telebot import types
 
 bot = telebot.TeleBot("7791519532:AAGbG-AXgqCDn9NBDYD65FVdFeCddXIId8g")
 class Item:
-    def __init__(self, name, dicription, photo, price, genre, age):
+    def __init__(self, name, dicription, photo, price, genre, age, articul):
         self.name = name
         self.dicription = dicription
         self.photo = photo
         self.price = price
         self.genre = genre
         self.age = age
+        self.articul = articul
 
     def show_info(self, id):
         bot.send_photo(id, self.photo)
