@@ -3,6 +3,8 @@ from user import *
 from item import *
 from telebot import types
 import sqlite3
+import os
+from dotenv import load_dotenv
 
 usersDB = sqlite3.connect('users.db')
 cursor = usersDB.cursor()
@@ -21,8 +23,9 @@ cursor.execute("CREATE TABLE IF NOT EXISTS orders "
                "articul TEXT )")
 
 usersDB.close()
+load_dotenv()
 
-bot = telebot.TeleBot("7791519532:AAGbG-AXgqCDn9NBDYD65FVdFeCddXIId8g")
+bot = telebot.TeleBot(os.getenv("TOKEN"))
 
 admin_id = 475799956
 
