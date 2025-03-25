@@ -6,6 +6,12 @@ import sqlite3
 import os
 from dotenv import load_dotenv
 
+load_dotenv()
+
+bot = telebot.TeleBot(os.getenv("TOKEN"))
+
+admin_id = 475799956
+
 usersDB = sqlite3.connect('users.db')
 cursor = usersDB.cursor()
 
@@ -23,26 +29,69 @@ cursor.execute("CREATE TABLE IF NOT EXISTS orders "
                "articul TEXT )")
 
 usersDB.close()
-load_dotenv()
 
-bot = telebot.TeleBot(os.getenv("TOKEN"))
+itemsDB = sqlite3.connect('items.db')
+cursor = itemsDB.cursor()
 
-admin_id = 475799956
+cursor.execute("CREATE TABLE IF NOT EXISTS items"
+               "(name TEXT, "
+               "dicription TEXT, "
+               "photo TEXT, "
+               "price INTEGER, "
+               "genre TEXT,"
+               "age INTEGER, "
+               "articul INTEGER)")
+itemsDB.close()
 
-gta = Item("GTA", "игра для народа",
-           open("photos/gta.jpg", "rb"), 1000,
-           "action", "6+", 1001)
 
-witcher = Item("Witcher 3", "игра для борцов со злом",
-           open("photos/whitcher.jpg", "rb"), 800,
-           "action", "6+", 1002)
+def add_items_db(item:Item):
+    itemsDB = sqlite3.connect('items.db')
+    cursor = itemsDB.cursor()
 
-wukong = Item("Wukong", "игра для Влада",
-           open("photos/wukong.jpg", "rb"), 2500,
-           "action", "1+", 1003)
+    cursor.execute("INSERT INTO items (name, dicription, photo, price, genre, age, articul)"
+                   "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                   (item.name, item.dicription, item.photo, item.price, item.genre, item.age, item.articul))
+
+    itemsDB.commit()
+    itemsDB.close()
+
+def get_items_db(items):
+    itemsDB = sqlite3.connect('items.db')
+    cursor = itemsDB.cursor()
+
+    cursor.execute("SELECT * FROM items")
+
+    items_db = cursor.fetchall()
+
+    for item in items_db:
+        item_class = Item(item[0], item[1], item[2], item[3], item[4], item[5], item[6])
+        items.append(item_class)
+
+    itemsDB.close()
+
+    return items
+
+
+# gta = Item("GTA", "игра для народа",
+#            "photos/gta.jpg", 1000,
+#            "action", "6+", 1001)
+#
+# witcher = Item("Witcher 3", "игра для борцов со злом",
+#            "photos/whitcher.jpg", 800,
+#            "action", "6+", 1002)
+#
+# wukong = Item("Wukong", "игра для Влада",
+#            "photos/wukong.jpg", 2500,
+#            "action", "1+", 1003)
+#
+# add_items_db(gta)
+# add_items_db(witcher)
+# add_items_db(wukong)
 
 users = []
-items = [gta, witcher, wukong]
+items = []
+
+items = get_items_db(items)
 
 def get_info_db(users):
     usersDB = sqlite3.connect('users.db')
@@ -98,6 +147,8 @@ def set_orders_db(orders, id):
         cursor.execute("INSERT INTO orders (id, articul) VALUES (?, ?)", (id, orders_str))
 
     usersDB.close()
+
+
 
 users = get_info_db(users)
 

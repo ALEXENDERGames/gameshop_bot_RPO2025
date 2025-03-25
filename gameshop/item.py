@@ -13,7 +13,7 @@ class Item:
         self.articul = articul
 
     def show_info(self, id):
-        bot.send_photo(id, self.photo)
+        bot.send_photo(id, open(self.photo, "rb"))
 
         buttons = types.InlineKeyboardMarkup()
         buy = types.InlineKeyboardButton("купить", callback_data=self.name)
