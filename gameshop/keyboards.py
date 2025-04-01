@@ -8,6 +8,7 @@ def create_main_keyboard():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     buttons = [
         types.KeyboardButton('🎮 Рекомендовать игру'),
+        types.KeyboardButton('🛒 Заказать'),  # Новая кнопка
         types.KeyboardButton('❓ Помощь'),
         types.KeyboardButton('🎰 Случайный выбор'),
         types.KeyboardButton('👋 Поздороваться')

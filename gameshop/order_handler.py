@@ -1,41 +1,50 @@
 # order_handler.py
 import telebot
+import random
 from telebot import types
+from datetime import datetime
+from excel_handler import save_order_to_excel
 
 user_temp_data = {}
+
+ORDER_RESPONSES = [
+    "🎮 Ваш заказ принят! Наши гоблины-курьеры уже бегут на склад (если не отвлеклись на поедание грибов)",
+    "💻 Заказ #404 оформлен! Ожидайте доставку в течение 24 часов (если не сломается интернет)",
+    "🔮 Волшебные единороги получили ваш заказ! (но если увидят радугу - могут и сбежать)",
+    f"🤖 Дроны-доставщики активированы. Шанс успешной доставки: {random.randint(85, 99)}%",
+    "🐶 Doge подтверждает: much order, very soon, wow!",
+    "🚀 Заказ запущен в гиперпространство! Примерное время доставки: между завтраком и апокалипсисом",
+    "📦 Готово! Теперь ваш заказ участвует в квесте 'Доставка или смерть'",
+    "🍕 Заказ принят! Если курьер опоздает - он автоматически превращается в пиццу",
+    "🤷 Обещаем доставить быстро ((если наш программист наконец починит баги)",
+    "🦸 Ваш заказ получил статус 'Миссия выполнима'. Тони Старк уже в пути!"
+]
 
 
 def setup_order_handlers(bot, admin_id):
     @bot.message_handler(commands=['order'])
     def handle_order(message):
-        # Добавляем проверку типа чата (первая строка обработчика)
         if message.chat.type != 'private':
-            bot.reply_to(message, "❌ Заказы принимаются только в личных сообщениях с ботом")
+            bot.reply_to(message, "❌ Заказы принимаются только в ЛС")
             return
 
         try:
-            # Проверяем доступность админа
-            try:
-                bot.send_chat_action(admin_id, 'typing')
-            except Exception as e:
-                bot.reply_to(message, "❌ Администратор недоступен. Попробуйте позже.")
-                return
-
-            msg = bot.send_message(
-                message.chat.id,
-                "📝 Введите название услуги/игры для заказа:",
-                parse_mode='HTML'
-            )
-            bot.register_next_step_handler(msg, process_order_name)
+            bot.send_chat_action(admin_id, 'typing')
         except Exception as e:
-            bot.reply_to(message, "⚠ Произошла ошибка. Попробуйте позже.")
+            bot.reply_to(message, "❌ Админ недоступен. Попробуйте позже.")
+            return
 
-    # ... остальные функции process_order_name и process_order_details без изменений ...
+        msg = bot.send_message(
+            message.chat.id,
+            "📝 Введите название услуги:",
+            parse_mode='HTML'
+        )
+        bot.register_next_step_handler(msg, process_order_name)
 
     def process_order_name(message):
         try:
             if len(message.text) < 3:
-                bot.reply_to(message, "❌ Слишком короткое название (минимум 3 символа)")
+                bot.reply_to(message, "❌ Название слишком короткое")
                 return
 
             user_temp_data[message.from_user.id] = {
@@ -49,27 +58,22 @@ def setup_order_handlers(bot, admin_id):
                 parse_mode='HTML'
             )
             bot.register_next_step_handler(msg, process_order_details)
-        except Exception:
-            bot.reply_to(message, "⚠ Ошибка обработки. Начните заново.")
 
-            # Можно добавить во второй обработчик (process_order_name)
-            if message.chat.type != 'private':
-                if message.from_user.id in user_temp_data:
-                    del user_temp_data[message.from_user.id]
-                bot.reply_to(message, "❌ Продолжите заказ в личном чате с ботом")
-                return
-
-    # order_handler.py (измененная функция)
-    from excel_handler import save_order_to_excel
+        except Exception as e:
+            bot.reply_to(message, "⚠ Ошибка. Начните заново.")
+            if message.from_user.id in user_temp_data:
+                del user_temp_data[message.from_user.id]
 
     def process_order_details(message):
-        try:
-            user_id = message.from_user.id
-            if user_id not in user_temp_data:
-                bot.reply_to(message, "❌ Время сессии истекло. Начните заново.")
-                return
+        user_id = message.from_user.id
+        if user_id not in user_temp_data:
+            bot.reply_to(message, "❌ Сессия истекла. Начните заново.")
+            return
 
+        try:
             order_info = user_temp_data[user_id]
+
+            # Формируем текст заказа
             order_text = (
                 f"🛒 <b>Новый заказ</b>\n\n"
                 f"👤 Пользователь: {order_info['username']}\n"
@@ -78,42 +82,29 @@ def setup_order_handlers(bot, admin_id):
                 f"📋 Описание: {message.text}"
             )
 
-            # Отправляем себе
-            try:
-                bot.send_message(
-                    admin_id,
-                    order_text,
-                    parse_mode='HTML'
-                )
-                bot.reply_to(message, "✅ Заказ отправлен! Скоро свяжемся.")
+            # Сохраняем в Excel перед отправкой
+            save_success = save_order_to_excel(
+                user_id=user_id,
+                username=order_info['username'],
+                order_name=order_info['order_name'],
+                description=message.text
+            )
 
-                # Сохраняем в Excel
-                save_success = save_order_to_excel(
-                    user_id=user_id,
-                    username=order_info['username'],
-                    order_name=order_info['order_name'],
-                    description=message.text
-                )
+            # Отправляем админу
+            bot.send_message(admin_id, order_text, parse_mode='HTML')
 
-                if not save_success:
-                    bot.send_message(admin_id, "⚠ Не удалось сохранить заказ в Excel!")
+            # Отправляем ответ пользователю
+            funny_response = random.choice(ORDER_RESPONSES)
+            if message.from_user.first_name:
+                funny_response = funny_response.replace("!", f", {message.from_user.first_name}!")
+            bot.reply_to(message, funny_response)
 
-            except Exception as e:
-                print(f"Ошибка при отправке заказа: {e}")
-                bot.reply_to(message, "❌ Не удалось отправить заказ. Попробуйте позже.")
-
-            # Очищаем данные
-            if user_id in user_temp_data:
-                del user_temp_data[user_id]
+            if not save_success:
+                bot.send_message(admin_id, "⚠ Ошибка сохранения в Excel!")
 
         except Exception as e:
-            print(f"Ошибка обработки заказа: {e}")
-            bot.reply_to(message, "⚠ Ошибка обработки заказа. Попробуйте снова.")
-            if user_id in user_temp_data:
-                del user_temp_data[user_id]
+            bot.reply_to(message, f"❌ Ошибка обработки: {str(e)}")
 
-
-        except Exception:
-            bot.reply_to(message, "⚠ Ошибка обработки заказа. Попробуйте снова.")
+        finally:
             if user_id in user_temp_data:
                 del user_temp_data[user_id]
