@@ -2,13 +2,18 @@ import telebot
 import random
 import os
 from stickers_data import STICKERS
+from order_handler import setup_order_handlers
+from database import Database
 from Games_Data import games, GAMES_IMAGES_PATH
 from keyboards import create_main_keyboard, create_genres_keyboard, get_game_by_genre
 from random import choice
 
 TOKEN = '7340727274:AAFT8cdYB2sK63ijCZzjJ6nubgRA1pmMkTg'
+db = Database()
+ADMIN_ID = 1425747866
 bot = telebot.TeleBot(TOKEN)
 user_irritation = {}
+setup_order_handlers(bot, ADMIN_ID)
 
 # ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
 def send_random_sticker(chat_id):
@@ -160,6 +165,30 @@ def handle_genre_selection(call):
         bot.send_message(call.message.chat.id, "😢 Игр этого жанра не найдено")
 
     bot.answer_callback_query(call.id)
+
+
+@bot.message_handler(commands=['admin_orders'])
+def show_orders(message):
+    if message.from_user.id != ADMIN_ID:
+        return
+
+    orders = db.get_orders()
+
+    if not orders:
+        bot.reply_to(message, "Нет новых заказов")
+        return
+
+    response = "📋 Список заказов:\n\n"
+    for order in orders:
+        response += (
+            f"🔢 #{order[0]}\n"
+            f"👤 Пользователь: @{order[6]}\n"
+            f"📛 Услуга: {order[2]}\n"
+            f"📅 Дата: {order[5]}\n"
+            f"―――――――――――――――――――\n"
+        )
+
+    bot.send_message(message.chat.id, response)
 
 
 # ---------- ОБРАБОТКА ПРОИЗВОЛЬНЫХ СООБЩЕНИЙ ----------
