@@ -1,0 +1,2 @@
+# config.py
+WEATHER_API_KEY = "d7eb0229ee6440d4a1a55302251104" 

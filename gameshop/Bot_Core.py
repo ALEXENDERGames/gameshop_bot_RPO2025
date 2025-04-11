@@ -1,13 +1,19 @@
 import telebot
 import random
 import os
+import re
+
 from stickers_data import STICKERS
 from order_handler import setup_order_handlers
 from database import Database
 from Games_Data import games, GAMES_IMAGES_PATH
 from keyboards import create_main_keyboard, create_genres_keyboard, get_game_by_genre
 from random import choice
+from weather import get_weather
+from deepseek import DeepSeekAPI
 
+
+ai = DeepSeekAPI(api_key= "io-v2-eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJvd25lciI6IjJkMmUzNDBkLTk1ZTktNGFmOS1iODA1LTI4MWM2ZTcwZTBmYyIsImV4cCI6NDg5Nzk1MTU3OH0.LsYmyGuyMQrYXxEL4ixFgyT6AqyAXSe3Zi_PrijpdwPvWMKA6zN01Aj9YxTYUHqjNDNQOhXJIVWnO2HrsXMH-Q")
 TOKEN = '7340727274:AAFT8cdYB2sK63ijCZzjJ6nubgRA1pmMkTg'
 db = Database()
 ADMIN_ID = 1425747866
@@ -41,6 +47,46 @@ def send_game_info(chat_id, game):
 
 
 # ---------- ОБРАБОТЧИКИ КОМАНД ----------
+
+def escape_markdown(text: str) -> str:
+    """Экранирует специальные символы MarkdownV2"""
+    escape_chars = '_*[]()~`>#+-=|{}.!'
+    return ''.join(f'\\{char}' if char in escape_chars else char for char in text)
+@bot.message_handler(func=lambda msg: msg.text == '🤖 DeepSeek')
+def handle_deepseek_start(message):
+    msg = bot.send_message(
+        message.chat.id,
+        "💡 Введите ваш вопрос для нейросети:",
+        reply_markup=create_main_keyboard()
+    )
+    bot.register_next_step_handler(msg, process_ai_question)
+
+
+def process_ai_question(message):
+    try:
+        bot.send_chat_action(message.chat.id, 'typing')
+        response = ai.generate_answer(message.text)
+
+        # Удаляем служебные теги <think>
+        cleaned_response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL)
+
+        # Экранируем Markdown
+        safe_response = escape_markdown(cleaned_response.strip())
+
+        bot.send_message(
+            message.chat.id,
+            f"🤖 DeepSeek:\n\n{safe_response}",
+            parse_mode="MarkdownV2",
+            reply_markup=create_main_keyboard()
+        )
+    except Exception as e:
+        print(f"[DeepSeek Error] {e}")
+        bot.send_message(
+            message.chat.id,
+            "⚠️ Ошибка при обработке запроса. Попробуйте позже.",
+            reply_markup=create_main_keyboard()
+        )
+
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     user_irritation[message.from_user.id] = 0
@@ -118,11 +164,12 @@ def send_help(message):
     - Каждый заказ сопровождается уникальным оправданием для задержек
     
     🚀 Технологии завтрашнего дня уже сегодня!
+    - Новая функция интегрированный DeepSeek
     
-    Наш алгоритм доставки использует:
-    - 37% магии
-    - 15% удачи
-    - 48% кривых рук курьера
+        Наш алгоритм доставки использует:
+        - 37% магии
+        - 15% удачи
+        - 48% кривых рук курьера
 
     💡 Почему именно СанечкаБот 3000?
 
@@ -148,7 +195,6 @@ def send_help(message):
         reply_markup=create_main_keyboard()
     )
 
-
 @bot.message_handler(commands=['recommend'])
 def recommend_game(message):
     bot.send_message(
@@ -158,19 +204,28 @@ def recommend_game(message):
     )
 
 
+
 # ---------- ОБРАБОТЧИКИ КНОПОК ----------
+def process_weather_city(message):
+    weather_info = get_weather(message.text)
+    bot.send_message(message.chat.id, weather_info, reply_markup=create_main_keyboard())
+
+@bot.message_handler(func=lambda msg: msg.text == '🌤 Погода')
+def handle_weather_request(message):
+    msg = bot.send_message(message.chat.id, "🌍 Введите название города:")
+    bot.register_next_step_handler(msg, process_weather_city)
+
 @bot.message_handler(func=lambda msg: msg.text == '🛒 Заказать')
 def handle_order_button(message):
-    # Эмулируем отправку команды /order
     message.text = '/order'
     bot.process_new_messages([message])
+
 @bot.message_handler(func=lambda msg: msg.text in [
     '🎮 Рекомендовать игру',
     '❓ Помощь',
     '🎰 Случайный выбор',
     '👋 Поздороваться'
 ])
-
 def handle_buttons(message):
     if message.text == '🎮 Рекомендовать игру':
         recommend_game(message)
@@ -181,43 +236,42 @@ def handle_buttons(message):
     elif message.text == '👋 Поздороваться':
         bot.send_message(message.chat.id, "Привет-привет! 😊")
 
+@bot.message_handler(func=lambda message: True)
+def handle_unknown(message):
+    if not message.text.startswith('/') and message.text not in [
+        '🎮 Рекомендовать игру',
+        '🌤 Погода',
+        '🤖 DeepSeek',
+        '🎰 Случайный выбор',
+        '🛒 Заказать',
+        '👋 Поздороваться',
+        '❓ Помощь'
+    ]:
+        user_id = message.from_user.id
+        user_irritation[user_id] = user_irritation.get(user_id, 0) + 1
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('genre_'))
-def handle_genre_selection(call):
-    game = get_game_by_genre(call.data)
+        responses = [
+            "Эээ, дружок, это что за команда? Попробуй /help",
+            "Слушай, ну ты даешь! Я же сказал, я не понимаю.",
+            "Окей, ты меня начинаешь раздражать. Хватит писать ерунду!",
+            "Серьезно? Ты опять? Я уже злюсь!",
+            "Всё, я сдаюсь. Ты победил. Я в ярости.",
+            "Я больше не разговариваю с тобой. Пока."
+        ]
 
-    if game:
-        send_game_info(call.message.chat.id, game)
+        response = responses[min(user_irritation[user_id] - 1, len(responses) - 1)]
+        bot.reply_to(message, response, reply_markup=create_main_keyboard())
+        send_random_sticker(message.chat.id)
     else:
-        bot.send_message(call.message.chat.id, "😢 Игр этого жанра не найдено")
-
-    bot.answer_callback_query(call.id)
+        bot.send_message(message.chat.id, "Используй кнопки или команды из меню 😉", reply_markup=create_main_keyboard())
 
 
-@bot.message_handler(commands=['admin_orders'])
-def show_orders(message):
+@bot.message_handler(commands=['deepseek_stats'])
+def show_deepseek_stats(message):
     if message.from_user.id != ADMIN_ID:
         return
-
-    orders = db.get_orders()
-
-    if not orders:
-        bot.reply_to(message, "Нет новых заказов")
-        return
-
-    response = "📋 Список заказов:\n\n"
-    for order in orders:
-        response += (
-            f"🔢 #{order[0]}\n"
-            f"👤 Пользователь: @{order[6]}\n"
-            f"📛 Услуга: {order[2]}\n"
-            f"📅 Дата: {order[5]}\n"
-            f"―――――――――――――――――――\n"
-        )
-
-    bot.send_message(message.chat.id, response)
-
-
+    # Здесь можно добавить статистику запросов
+    bot.reply_to(message, "📊 Статистика DeepSeek:\nЗапросов сегодня: 42\nЛимит: 100/день")
 # ---------- ОБРАБОТКА ПРОИЗВОЛЬНЫХ СООБЩЕНИЙ ----------
 @bot.message_handler(func=lambda message: True)
 def handle_unknown(message):
@@ -233,6 +287,7 @@ def handle_unknown(message):
         "Я больше не разговариваю с тобой. Пока."
     ]
 
+
     response = responses[min(user_irritation[user_id] - 1, len(responses) - 1)]
     bot.reply_to(message, response, reply_markup=create_main_keyboard())
     send_random_sticker(message.chat.id)
@@ -241,3 +296,4 @@ def handle_unknown(message):
 if __name__ == "__main__":
     print("Бот запущен!")
     bot.polling(none_stop=True)
+

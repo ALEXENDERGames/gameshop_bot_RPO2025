@@ -8,7 +8,7 @@ def create_main_keyboard():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     buttons = [
         types.KeyboardButton('🎮 Рекомендовать игру'),
-        types.KeyboardButton('🛒 Заказать'),  # Новая кнопка
+        types.KeyboardButton('🛒 Заказать'),
         types.KeyboardButton('❓ Помощь'),
         types.KeyboardButton('🎰 Случайный выбор'),
         types.KeyboardButton('👋 Поздороваться')
@@ -38,6 +38,14 @@ def create_genres_keyboard():
     markup.add(*buttons)
     return markup
 
+# В функции create_main_keyboard добавить новую кнопку
+def create_main_keyboard():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    markup.row('🎮 Рекомендовать игру', '🌤 Погода')
+    markup.row('🤖 DeepSeek', '🎰 Случайный выбор')
+    markup.row('🛒 Заказать', '👋 Поздороваться')
+    markup.row('❓ Помощь')
+    return markup
 
 def get_game_by_genre(callback_data):
     """Выбор игры по жанру из callback"""
